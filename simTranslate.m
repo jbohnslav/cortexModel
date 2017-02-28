@@ -275,7 +275,7 @@ for tt = 1:NT
             % ADD SYNAPTIC CURRENTS HERE! Current depends on population
             for qq=1:Npop
                 % why is this a minus sign??
-                dv = dv - gSyn(qq,pc)*(xdecay(qq,cc)-xrise(qq,cc))/(taudecay(qq,pc)-taurise(qq,pc));
+                dv = dv + gSyn(qq,pc)*(xdecay(qq,cc)-xrise(qq,cc))/(taudecay(qq,pc)-taurise(qq,pc));
             end
             
             % change current to voltage
