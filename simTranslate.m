@@ -1,8 +1,7 @@
-% called translate because it's my attempt to translate from Julia to
-% MATLAB
-% function simTranslate(T,dt,wind,wipost,wstr,wext,rext,istim,curstim)
-% debugging
-close all; clear all; clc
+%% simTranslate: the code from Litwin-Kumar et al. 2016 in MATLAB
+% Translated from Julia to MATLAB by J. Bohnslav (JBohnslav@gmail.com)
+% Running the script as-is should generate average firing rates similar to
+% those produced by Litwin-Kumar's Julia code. 
 %% GENERATE PARAMS
 Ntrials = 1;
 T = 20000;
@@ -43,7 +42,7 @@ J = [1 1 1 1;
      1 1 1 1];
  
 % set up external input rates
-r0 = [2.4 0.4 0.8 0.3]*1;
+r0 = [2.4 0.4 0.8 0.3];
 r2 = [0.2 0.2 0 0];
 
 if ~pvtuned
@@ -381,14 +380,4 @@ end
 
 times = times(1:ns);
 tinds = tinds(1:ns);
-% avcond = avcond/(NT-irecstart);
-%% DIAGNOSTICS
 
-% print the external input rates for all cells
-disp('External input rate to nth cell, in kHz');
-externalInputCount = sum(allExt,2);
-
-figure; 
-plot(1:Ntot, externalInputCount/T*1000);
-xlabel('Cells');
-ylabel('External input rate (Hz)');
