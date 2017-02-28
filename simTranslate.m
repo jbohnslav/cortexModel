@@ -1,7 +1,8 @@
 % called translate because it's my attempt to translate from Julia to
 % MATLAB
 % function simTranslate(T,dt,wind,wipost,wstr,wext,rext,istim,curstim)
-
+% debugging
+close all; clear all; clc
 %% GENERATE PARAMS
 Ntrials = 1;
 T = 20000;
@@ -171,7 +172,7 @@ wipost = wipost(1:syncount);
 wstr = wstr(1:syncount);
 
 rext = zeros(Ntot,1);
-% pinds is already defined
+pinds = [1 1+cumsum(Ncells)]; % start index of each population
 for pp=1:Npop
     theta_p = linspace(-pi/2,pi/2,Ncells(pp));
     % r2 defines which inputs are tuned, and how much
@@ -193,6 +194,7 @@ irecstart = round(recstart/dt);
 
 % external stimulation
 curext = zeros(Ntot,1); % constant bias current to one population
+istim = 1; % index identity of population to be stimulated, in this case E
 curext(pinds(istim):pinds(istim+1)-1) = curstim;
 
 % state vectors
@@ -228,7 +230,9 @@ F = ones(4,Ntot);
 
 % return values, not sure if necessary
 ns = 0;
-maxns = round(1,T*Ntot*.05);
+% changed this to not be .05 times T
+maxns = round(T*Ntot);
+% maxns = inf;
 times = zeros(1,maxns);
 tinds = zeros(1,maxns);
 vall = zeros(1);
@@ -238,6 +242,11 @@ avcond = zeros(Npop,Ntot);
 %% JIM ADDED
 allT = (dt:dt:T);
 allV = nan(Ntot,NT);
+allF = nan(Ntot,NT);
+allD = nan(Ntot,NT);
+allRise = nan(Ntot,NT);
+allDecay = nan(Ntot,NT);
+allExt = zeros(Ntot,NT);
 %% SIMULATION~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 disp('starting sim');
 for tt = 1:NT
@@ -253,7 +262,9 @@ for tt = 1:NT
         % update w term (adaptve part of aEIF model, brette and gerstner)
         w_adapt(cc) = w_adapt(cc) + ...
             (dt/tauw_adapt(pc))*(a_adapt(pc)*(v(cc)-EL(pc))-w_adapt(cc));
-        
+        if isnan(w_adapt(cc))
+            disp('w error');
+        end
         for qq=1:Npop
             xrise(qq,cc) = xrise(qq,cc)- dt*xrise(qq,cc)/taurise(qq,pc);
             xdecay(qq,cc) = xdecay(qq,cc) - dt*xdecay(qq,cc)/taudecay(qq,pc);
@@ -274,12 +285,22 @@ for tt = 1:NT
             
             % ADD SYNAPTIC CURRENTS HERE! Current depends on population
             for qq=1:Npop
-                % why is this a minus sign??
-                dv = dv + gSyn(qq,pc)*(xdecay(qq,cc)-xrise(qq,cc))/(taudecay(qq,pc)-taurise(qq,pc));
+                % minus sign because if xDecay < xRise, term is negative
+                dv = dv - gSyn(qq,pc)*(v(cc)-Esyn(qq,pc))*(xdecay(qq,cc)-xrise(qq,cc))/(taudecay(qq,pc)-taurise(qq,pc));
             end
             
+%             if dv == inf
+%                 disp('dv2 error');
+%             end
+            if dv == inf
+                v(cc) = 20;
+            else
             % change current to voltage
-            v(cc) = v(cc)+dt*dv/Cm(pc);
+                v(cc) = v(cc)+dt*dv/Cm(pc);
+            end
+            if isnan(v(cc))
+                disp('error');
+            end
         end % end if in refractory period
     end
     
@@ -322,28 +343,33 @@ for tt = 1:NT
            % does this mean external excitation only goes to E neurons?
            xrise(1,cc) = xrise(1,cc)+wext(cc); % increment excitation
            xdecay(1,cc) = xdecay(1,cc)+wext(cc);
+           allExt(cc,tt) = allExt(cc,tt)+1;
         end
     end
     
-    if tt>irecstart
-        for cc = 1:Ntot
-           pc = whichpop(cc);
-           for qq=1:Npop
-              avcond(qq,cc) = avcond(qq,cc) + ...
-                  gSyn(qq,pc)*(xdecay(qq,cc)-xrise(qq,cc))/(taudecay(qq,pc)-taurise(qq,pc)); 
-           end
-        end
-    end
+%     if tt>irecstart
+%         for cc = 1:Ntot
+%            pc = whichpop(cc);
+%            for qq=1:Npop
+%               avcond(qq,cc) = avcond(qq,cc) + ...
+%                   gSyn(qq,pc)*(xdecay(qq,cc)-xrise(qq,cc))/(taudecay(qq,pc)-taurise(qq,pc)); 
+%            end
+%         end
+%     end
     
     % JIM ADDED
     allV(:,tt) = v;
+    allF(:,tt) = mean(F)'; % average over all input pops
+    allD(:,tt) = mean(D)';
+    allRise(:,tt) = mean(xrise)';
+    allDecay(:,tt) = mean(xdecay)';
 end % end sim
 
 disp('100%');
 disp('Calculating rates');
 counts = zeros(1,Ntot);
 for cc=1:Ntot
-    counts(cc) = sum((tinds==cc)*(times>recstart));
+    counts(cc) = sum((tinds==cc).*(times>recstart));
 end
 
 rates = 1000.*counts/(T-recstart);
@@ -355,5 +381,14 @@ end
 
 times = times(1:ns);
 tinds = tinds(1:ns);
-avcond = avcond/(NT-irecstart);
+% avcond = avcond/(NT-irecstart);
+%% DIAGNOSTICS
 
+% print the external input rates for all cells
+disp('External input rate to nth cell, in kHz');
+externalInputCount = sum(allExt,2);
+
+figure; 
+plot(1:Ntot, externalInputCount/T*1000);
+xlabel('Cells');
+ylabel('External input rate (Hz)');
