@@ -6,17 +6,14 @@ close all; clear all; clc
     pvtuned, p0, p2, J, r0, r2, gSyn, Esyn, taurise, taudecay, ...
     tauD, UD, tauF, UF, Fmax, Cm, gL, tau, EL, deltaT,vTpop, ...
     sigvT, vth, vre, tauref, tauw_adapt,a_adapt,b_adapt] = genParams();
-warning('breaking PV connections!');
-gSyn(1,2) = 0;
+% warning('breaking PV connections!');
+% gSyn(1,2) = 0;
 %% genweights: generate recurrent and external weights and external input
 %  rates
 [rext,wext,wind,wipost,wstr,syncount,pinds] = ...
     genWeights(Ntot,Ncells,Npop,p0,p2,J,r0,r2);
 
 %% set up stimulation
-
-
-
 
 % other parameters
 NT = round(T/dt);
@@ -111,6 +108,10 @@ fRates = nan(Ntot,length(downsampledT),nTrials);
 %% SIMULATION~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 disp('starting sim');
 for trial = 1:nTrials
+    % generate new weight matrices
+    [rext,wext,wind,wipost,wstr,syncount,pinds] = ...
+    genWeights(Ntot,Ncells,Npop,p0,p2,J,r0,r2);
+    
     % make sure important state vectors are reset
     v = -60.*ones(Ntot,1);
     lastSpike = -100.*ones(Ntot,1);
@@ -273,7 +274,7 @@ for trial = 1:nTrials
     
 end
 %% raster figure
-% 
+
 % figure;
 % subplot(4,3,1:9);
 % for i=1:Ntot
@@ -335,7 +336,81 @@ end
 %     plot(downsampledT,groupAverages(i,:));
 % end
 % legend(groupNames);
+%% firing rate figure for single trial
+fR = fRates(:,:,randi(size(fRates,3)));
+groupNames = {'E', 'PV', 'SOM', 'VIP', 'stimE'};
+cMap = [
+    0 0.3 0.6; % blue-ish
+    0 .5 0; % green
+    1 .5 0; % orange
+    115/255 44/255 123/255];
 
+groupAverages = zeros(nGroups+1,length(downsampledT));
+gNums = zeros(nGroups+1,1);
+gNum = 1;
+for i=1:Ntot
+    if sum(stimulatedNeurons==i)>0
+        groupAverages(nGroups+1,:) = groupAverages(nGroups+1,:)+...
+            fR(i,:);
+        gNums(nGroups+1) = gNums(nGroups+1)+1;
+    else
+        groupAverages(whichpop(i),:) = groupAverages(whichpop(i),:)+...
+            fR(i,:);
+        gNums(whichpop(i)) = gNums(whichpop(i))+1;
+    end
+end
+% firing rate averages, in hertz
+groupAverages = groupAverages./gNums.*binSize*dt;
+
+figure;
+subplot(4,3,1:9);
+hold on;
+for i=1:nGroups+1
+    plotH = plot(downsampledT,groupAverages(i,:));
+    if i>=1 && i<=4
+        plotH.Color = cMap(i,:);
+    else
+        plotH.Color = [0 0 .3];
+    end
+end
+legend(groupNames);
+%% zoom in figure around stimulation
+
+figure;
+subplot(4,3,1:9);
+hold on;
+for i=1:nGroups+1
+    plotH = plot(downsampledT,groupAverages(i,:));
+    if i>=1 && i<=4
+        plotH.Color = cMap(i,:);
+    else
+        plotH.Color = [0 0 .3];
+    end
+end
+legend(groupNames);
+% find a good zoom window around the stimulation
+[row,col] = find(stimI==max(max(stimI,[],2)),1);
+dI = diff(stimI(row,:));
+[~,stimOn ] = max(dI);
+[~,stimOff ] = min(dI);
+[val,downsampledStartInd] = min(abs(downsampledT-allT(stimOn)));
+[val,downsampledEndInd] = min(abs(downsampledT-allT(stimOff)));
+zoomWidth = 30; % in bins
+xlim([downsampledT(downsampledStartInd-zoomWidth) ...
+    downsampledT(downsampledStartInd+zoomWidth)]);
+a = gca;
+a.XTick = [];
+ylabel('Average firing rate across 10 trials', 'fontsize', 18, ...
+    'fontweight', 'bold');
+
+downsampledStim = downsample(stimI(row,:),binSize/dt);
+subplot(4,3,10:12);
+plot(downsampledT,downsampledStim);
+xlim([downsampledT(downsampledStartInd-zoomWidth) ...
+    downsampledT(downsampledStartInd+zoomWidth)]);
+xlabel('Time (ms)');
+
+disp('THIS IS AFTER BREAKING E-> PV CONNECTIONS!!!');
 %%
 fR = mean(fRates,3);
 groupNames = {'E', 'PV', 'SOM', 'VIP', 'stimE'};
@@ -411,5 +486,4 @@ xlim([downsampledT(downsampledStartInd-zoomWidth) ...
     downsampledT(downsampledStartInd+zoomWidth)]);
 xlabel('Time (ms)');
 
-
-disp('THIS IS AFTER BREAKING E-> PV CONNECTIONS!!!');
+% disp('THIS IS AFTER BREAKING E-> PV CONNECTIONS!!!');
