@@ -6,6 +6,11 @@ close all; clear all; clc
     pvtuned, p0, p2, J, r0, r2, gSyn, Esyn, taurise, taudecay, ...
     tauD, UD, tauF, UF, Fmax, Cm, gL, tau, EL, deltaT,vTpop, ...
     sigvT, vth, vre, tauref, tauw_adapt,a_adapt,b_adapt] = genParams();
+%% change default parameters
+T = 5*1000; % shortened trials
+note = ''; % if nothing is different
+note = 'break E->PV'; % 
+
 % warning('breaking PV connections!');
 % gSyn(1,2) = 0;
 %% genweights: generate recurrent and external weights and external input
@@ -17,12 +22,12 @@ close all; clear all; clc
 
 % other parameters
 NT = round(T/dt);
-nTrials = 10;
+nTrials = 25;
 
 stimPop = 1; % excitatory neurons
 curstim = 200; % picoAmps
-stimLength = 5; % ms
-stimStart = 5*1000; % ms
+stimLength = 100; % ms
+stimStart = 2.5*1000; % ms
 
 % set up groups
 nGroups = 4;
@@ -338,16 +343,24 @@ end
 % legend(groupNames);
 %% firing rate figure for single trial
 fR = fRates(:,:,randi(size(fRates,3)));
-groupNames = {'E', 'PV', 'SOM', 'VIP', 'stimE'};
 cMap = [
     0 0.3 0.6; % blue-ish
     0 .5 0; % green
     1 .5 0; % orange
-    115/255 44/255 123/255];
+    115/255 44/255 123/255
+    0 0 .3 % darker blue for stimulated pop
+    ];
+groupNames = {'E', 'PV', 'SOM', 'VIP', 'stimE'};
+
+% COME UP WITH DESCRIPTIVE FIGURE NAME FOT THIS FIGURE
+experimentDescription = sprintf(['StimPop_%s_groupsInPop_%d_photoCurrent_%dpA_'...
+    'stimLength_%dms%s'], groupNames{stimPop}, nGroups, curstim, stimLength,...
+    note);
+figName = [experimentDescription '_singleTrialPopFRates'];
+saveLoc = 'D:\Analysis\cortexModel\';
 
 groupAverages = zeros(nGroups+1,length(downsampledT));
 gNums = zeros(nGroups+1,1);
-gNum = 1;
 for i=1:Ntot
     if sum(stimulatedNeurons==i)>0
         groupAverages(nGroups+1,:) = groupAverages(nGroups+1,:)+...
@@ -362,32 +375,73 @@ end
 % firing rate averages, in hertz
 groupAverages = groupAverages./gNums.*binSize*dt;
 
-figure;
+figure('units', 'pix', 'outerposition', [0 50 1920 1150], 'color', [1 1 1]);
 subplot(4,3,1:9);
 hold on;
 for i=1:nGroups+1
-    plotH = plot(downsampledT,groupAverages(i,:));
-    if i>=1 && i<=4
-        plotH.Color = cMap(i,:);
-    else
-        plotH.Color = [0 0 .3];
-    end
+    plotH = plot(downsampledT./1000,groupAverages(i,:));
+    plotH.Color = cMap(i,:);
+    plotH.LineWidth = 1;
 end
-legend(groupNames);
-%% zoom in figure around stimulation
+% Use Tex to change the color of the text on the figure
+legendCell = cell(length(groupNames),1);
+for i=1:length(groupNames)
+    legendCell{i} = sprintf('\\color[rgb]{%.2f, %.2f, %.2f} %s',...
+        cMap(i,:), groupNames{i});
+end
+legH = legend(legendCell);
+legH.FontSize = 16;
+% Make figure pretty
+a = gca;
+a.FontSize = 14;
+a.XTick = [];
+a.TickDir = 'out';
+title(strrep(figName,'_', ' '), 'fontsize', 18);
+ylabel('FR (Hz)', 'fontsize', 16);
+legH.FontWeight = 'bold';
 
-figure;
+% Plot stimulation current!
+subplot(4,3,10:12);
+[row,col] = find(stimI==max(max(stimI,[],2)),1);
+plotH = plot(allT./1000,stimI(row,:));
+plotH.LineWidth = 1;
+a = gca;
+a.FontSize = 14;
+a.TickDir = 'out';
+ys = ylim;
+ylim([ys(1), ys(2)+50]);
+ylabel({'External stimulation', 'current (pA)'}, 'fontsize', 16);
+xlabel('Time (s)', 'fontsize', 16);
+export_fig([saveLoc, figName], '-png', '-eps');
+
+%% zoom in figure around stimulation
+figName = [experimentDescription '_singleTrialPopFRatesZoomed' note];
+
+figure('units', 'pix', 'outerposition', [0 50 1920 1150], 'color', [1 1 1]);
 subplot(4,3,1:9);
 hold on;
 for i=1:nGroups+1
-    plotH = plot(downsampledT,groupAverages(i,:));
-    if i>=1 && i<=4
-        plotH.Color = cMap(i,:);
-    else
-        plotH.Color = [0 0 .3];
-    end
+    plotH = plot(downsampledT./1000,groupAverages(i,:));
+    plotH.Color = cMap(i,:);
+    plotH.LineWidth = 1;
 end
-legend(groupNames);
+% Use Tex to change the color of the text on the figure
+legendCell = cell(length(groupNames),1);
+for i=1:length(groupNames)
+    legendCell{i} = sprintf('\\color[rgb]{%.2f, %.2f, %.2f} %s',...
+        cMap(i,:), groupNames{i});
+end
+legH = legend(legendCell);
+legH.FontSize = 16;
+% Make figure pretty
+a = gca;
+a.FontSize = 14;
+a.XTick = [];
+a.TickDir = 'out';
+title(strrep(figName,'_', ' '), 'fontsize', 18);
+ylabel('FR (Hz)', 'fontsize', 16);
+legH.FontWeight = 'bold';
+
 % find a good zoom window around the stimulation
 [row,col] = find(stimI==max(max(stimI,[],2)),1);
 dI = diff(stimI(row,:));
@@ -395,95 +449,228 @@ dI = diff(stimI(row,:));
 [~,stimOff ] = min(dI);
 [val,downsampledStartInd] = min(abs(downsampledT-allT(stimOn)));
 [val,downsampledEndInd] = min(abs(downsampledT-allT(stimOff)));
-zoomWidth = 30; % in bins
-xlim([downsampledT(downsampledStartInd-zoomWidth) ...
-    downsampledT(downsampledStartInd+zoomWidth)]);
-a = gca;
-a.XTick = [];
-ylabel('Average firing rate across 10 trials', 'fontsize', 18, ...
-    'fontweight', 'bold');
+zoomWidth = 15; % in bins
+% ZOOM IN! 
+xlim([downsampledT(downsampledStartInd-zoomWidth)./1000 ...
+    downsampledT(downsampledStartInd+zoomWidth)./1000]);
 
-downsampledStim = downsample(stimI(row,:),binSize/dt);
+% Plot stimulation current!
 subplot(4,3,10:12);
-plot(downsampledT,downsampledStim);
-xlim([downsampledT(downsampledStartInd-zoomWidth) ...
-    downsampledT(downsampledStartInd+zoomWidth)]);
-xlabel('Time (ms)');
-
-disp('THIS IS AFTER BREAKING E-> PV CONNECTIONS!!!');
-%%
-fR = mean(fRates,3);
-groupNames = {'E', 'PV', 'SOM', 'VIP', 'stimE'};
-cMap = [
-    0 0.3 0.6; % blue-ish
-    0 .5 0; % green
-    1 .5 0; % orange
-    115/255 44/255 123/255];
-
-groupAverages = zeros(nGroups+1,length(downsampledT));
-gNums = zeros(nGroups+1,1);
-gNum = 1;
-for i=1:Ntot
-    if sum(stimulatedNeurons==i)>0
-        groupAverages(nGroups+1,:) = groupAverages(nGroups+1,:)+...
-            fR(i,:);
-        gNums(nGroups+1) = gNums(nGroups+1)+1;
-    else
-        groupAverages(whichpop(i),:) = groupAverages(whichpop(i),:)+...
-            fR(i,:);
-        gNums(whichpop(i)) = gNums(whichpop(i))+1;
-    end
-end
-% firing rate averages, in hertz
-groupAverages = groupAverages./gNums.*binSize*dt;
-
-figure;
-subplot(4,3,1:9);
-hold on;
-for i=1:nGroups+1
-    plotH = plot(downsampledT,groupAverages(i,:));
-    if i>=1 && i<=4
-        plotH.Color = cMap(i,:);
-    else
-        plotH.Color = [0 0 .3];
-    end
-end
-legend(groupNames);
-
-%% zoom in figure around stimulation
-
-figure;
-subplot(4,3,1:9);
-hold on;
-for i=1:nGroups+1
-    plotH = plot(downsampledT,groupAverages(i,:));
-    if i>=1 && i<=4
-        plotH.Color = cMap(i,:);
-    else
-        plotH.Color = [0 0 .3];
-    end
-end
-legend(groupNames);
-% find a good zoom window around the stimulation
 [row,col] = find(stimI==max(max(stimI,[],2)),1);
-dI = diff(stimI(row,:));
-[~,stimOn ] = max(dI);
-[~,stimOff ] = min(dI);
-[val,downsampledStartInd] = min(abs(downsampledT-allT(stimOn)));
-[val,downsampledEndInd] = min(abs(downsampledT-allT(stimOff)));
-zoomWidth = 30; % in bins
-xlim([downsampledT(downsampledStartInd-zoomWidth) ...
-    downsampledT(downsampledStartInd+zoomWidth)]);
+plotH = plot(downsampledT./1000,downsampledStim);
+plotH.LineWidth = 1;
 a = gca;
-a.XTick = [];
-ylabel('Average firing rate across 10 trials', 'fontsize', 18, ...
-    'fontweight', 'bold');
+a.FontSize = 14;
+a.TickDir = 'out';
+ys = ylim;
+ylim([ys(1), ys(2)+50]);
+ylabel({'External stimulation', 'current (pA)'}, 'fontsize', 16);
+xlim([downsampledT(downsampledStartInd-zoomWidth)./1000 ...
+    downsampledT(downsampledStartInd+zoomWidth)./1000]);
+xlabel('Time (s)', 'fontsize',16);
 
-downsampledStim = downsample(stimI(row,:),binSize/dt);
-subplot(4,3,10:12);
-plot(downsampledT,downsampledStim);
-xlim([downsampledT(downsampledStartInd-zoomWidth) ...
-    downsampledT(downsampledStartInd+zoomWidth)]);
-xlabel('Time (ms)');
-
+export_fig([saveLoc, figName], '-png', '-eps');
 % disp('THIS IS AFTER BREAKING E-> PV CONNECTIONS!!!');
+%% AVERAGE ALL TRIALS TOGETHER
+figName = sprintf('%s_%dTrialsAvgPopRates%s', experimentDescription, nTrials,note);
+
+fR = mean(fRates,3);
+
+groupAverages = zeros(nGroups+1,length(downsampledT));
+gNums = zeros(nGroups+1,1);
+gNum = 1;
+for i=1:Ntot
+    if sum(stimulatedNeurons==i)>0
+        groupAverages(nGroups+1,:) = groupAverages(nGroups+1,:)+...
+            fR(i,:);
+        gNums(nGroups+1) = gNums(nGroups+1)+1;
+    else
+        groupAverages(whichpop(i),:) = groupAverages(whichpop(i),:)+...
+            fR(i,:);
+        gNums(whichpop(i)) = gNums(whichpop(i))+1;
+    end
+end
+% firing rate averages, in hertz
+groupAverages = groupAverages./gNums.*binSize*dt;
+
+figure('units', 'pix', 'outerposition', [0 50 1920 1150], 'color', [1 1 1]);
+subplot(4,3,1:9);
+hold on;
+for i=1:nGroups+1
+    plotH = plot(downsampledT./1000,groupAverages(i,:));
+    plotH.Color = cMap(i,:);
+    plotH.LineWidth = 1;
+end
+% Use Tex to change the color of the text on the figure
+legendCell = cell(length(groupNames),1);
+for i=1:length(groupNames)
+    legendCell{i} = sprintf('\\color[rgb]{%.2f, %.2f, %.2f} %s',...
+        cMap(i,:), groupNames{i});
+end
+legH = legend(legendCell);
+legH.FontSize = 16;
+% Make figure pretty
+a = gca;
+a.FontSize = 14;
+a.XTick = [];
+a.TickDir = 'out';
+title(strrep(figName,'_', ' '), 'fontsize', 18);
+ylabel('FR (Hz)', 'fontsize', 16);
+legH.FontWeight = 'bold';
+
+% Plot stimulation current!
+subplot(4,3,10:12);
+[row,col] = find(stimI==max(max(stimI,[],2)),1);
+plot(allT./1000,stimI(row,:));
+a = gca;
+a.FontSize = 14;
+a.TickDir = 'out';
+ys = ylim;
+ylim([ys(1), ys(2)+50]);
+ylabel({'External stimulation', 'current (pA)'}, 'fontsize', 16);
+
+export_fig([saveLoc, figName], '-png', '-eps');
+%% zoom in figure around stimulation
+figName = sprintf('%s_%dTrialsAvgPopRatesZoomed%s', ...
+    experimentDescription, nTrials,note);
+
+fR = mean(fRates,3);
+
+groupAverages = zeros(nGroups+1,length(downsampledT));
+gNums = zeros(nGroups+1,1);
+gNum = 1;
+for i=1:Ntot
+    if sum(stimulatedNeurons==i)>0
+        groupAverages(nGroups+1,:) = groupAverages(nGroups+1,:)+...
+            fR(i,:);
+        gNums(nGroups+1) = gNums(nGroups+1)+1;
+    else
+        groupAverages(whichpop(i),:) = groupAverages(whichpop(i),:)+...
+            fR(i,:);
+        gNums(whichpop(i)) = gNums(whichpop(i))+1;
+    end
+end
+% firing rate averages, in hertz
+groupAverages = groupAverages./gNums.*binSize*dt;
+
+figure('units', 'pix', 'outerposition', [0 50 1920 1150], 'color', [1 1 1]);
+subplot(4,3,1:9);
+hold on;
+for i=1:nGroups+1
+    plotH = plot(downsampledT./1000,groupAverages(i,:));
+    plotH.Color = cMap(i,:);
+    plotH.LineWidth = 1;
+end
+% Use Tex to change the color of the text on the figure
+legendCell = cell(length(groupNames),1);
+for i=1:length(groupNames)
+    legendCell{i} = sprintf('\\color[rgb]{%.2f, %.2f, %.2f} %s',...
+        cMap(i,:), groupNames{i});
+end
+legH = legend(legendCell);
+legH.FontSize = 16;
+% Make figure pretty
+a = gca;
+a.FontSize = 14;
+a.XTick = [];
+a.TickDir = 'out';
+title(strrep(figName,'_', ' '), 'fontsize', 18);
+ylabel('FR (Hz)', 'fontsize', 16);
+legH.FontWeight = 'bold';
+xlim([downsampledT(downsampledStartInd-zoomWidth)/1000 ...
+    downsampledT(downsampledStartInd+zoomWidth)/1000]);
+
+% Plot stimulation current!
+subplot(4,3,10:12);
+[row,col] = find(stimI==max(max(stimI,[],2)),1);
+plot(allT./1000,stimI(row,:));
+a = gca;
+a.FontSize = 14;
+a.TickDir = 'out';
+ys = ylim;
+ylim([ys(1), ys(2)+50]);
+ylabel({'External stimulation', 'current (pA)'}, 'fontsize', 16);
+xlim([downsampledT(downsampledStartInd-zoomWidth)/1000 ...
+    downsampledT(downsampledStartInd+zoomWidth)/1000]);
+
+export_fig([saveLoc, figName], '-png', '-eps');
+
+%% Average of fR 1 second before, compare to absolute peak fR during stim
+figName = sprintf('%s_%dTrials_AvgRateBeforeDuringStim%s', ...
+    experimentDescription, nTrials,note);
+
+avgBefore = cell(length(groupNames),1);
+avgDuring = cell(length(groupNames),1);
+for cc = 1:Ntot
+    
+    % get the avg firing rate across all trials 1 second before stim
+    fRateBefore = fR(cc,downsampledStartInd-1000/binSize:downsampledStartInd-1);
+    % get avg firing rate during all trials during stim
+    fRateDuring = fR(cc,downsampledStartInd:downsampledEndInd);
+    
+    % if stimulated population
+    if sum(cc==stimulatedNeurons)>0
+        % add to cell array
+        avgArray = avgBefore{5};
+        avgArray(end+1) = mean(fRateBefore);
+        avgBefore{5} = avgArray;
+        
+        avgArray = avgDuring{5};
+        avgArray(end+1) = mean(fRateDuring);
+        avgDuring{5} = avgArray;
+    else
+        % add to cell array of specified population
+        avgArray = avgBefore{whichpop(cc)};
+        avgArray(end+1) = mean(fRateBefore);
+        avgBefore{whichpop(cc)} = avgArray;
+        
+        avgArray = avgDuring{whichpop(cc)};
+        avgArray(end+1) = mean(fRateDuring);
+        avgDuring{whichpop(cc)} = avgArray;
+    end
+end
+
+meanBefore = cellfun(@mean,avgBefore);
+meanDuring = cellfun(@mean,avgDuring);
+
+% make new cell array with distributions side-by-side
+frSideBySide = cell(length(groupNames)*2,1);
+inds = 1:2:length(groupNames)*2;
+% make a new colormap to match this array
+cMap2 = nan(length(groupNames)*2,3);
+for i=1:length(groupNames)
+    frSideBySide{inds(i)} = avgBefore{i};
+    frSideBySide{inds(i)+1} = avgDuring{i};
+    cMap2(inds(i),:) = cMap(i,:);
+    cMap2(inds(i)+1,:) = cMap(i,:);
+end
+
+meanSideBySide = cellfun(@mean,frSideBySide);
+
+% figure out the maximum firing rate to set the y limit
+allFR = [avgBefore{:} avgDuring{:}];
+maxFR = ceil(max(allFR));
+
+figure('Units', 'Pix', 'outerposition', [0 50 1300 1150], 'color', [1 1 1]);
+plotSpread(frSideBySide, 'distributionColors', cMap2);
+hold on;
+for i=1:length(groupNames)*2
+    line([i-.4 i+.4], [meanSideBySide(i) meanSideBySide(i)], 'Color', ...
+        cMap2(i,:), 'lineWidth', 1.5);
+end
+hold off;
+newLegendCell = cell(length(groupNames)*2,1);
+for i=1:length(groupNames)
+    newLegendCell{inds(i)} = legendCell{i};
+    newLegendCell{inds(i)+1} = '';
+end
+legH = legend(newLegendCell);
+legH.FontSize = 16;
+a = gca;
+a.YLim = [0 maxFR];
+a.FontSize = 14;
+ylabel('Firing rate (Hz)', 'fontsize', 18);
+a.XTick = [];
+
+title(strrep(figName,'_', ' '), 'Fontsize', 18,'fontweight', 'bold');
+export_fig([saveLoc, figName], '-png', '-eps');
