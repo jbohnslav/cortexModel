@@ -9,7 +9,7 @@ close all; clear all; clc
 %% change default parameters
 T = 5*1000; % shortened trials
 note = ''; % if nothing is different
-note = 'break E->PV'; % 
+% note = 'break E-PV'; % 
 
 % warning('breaking PV connections!');
 % gSyn(1,2) = 0;
@@ -24,13 +24,13 @@ note = 'break E->PV'; %
 NT = round(T/dt);
 nTrials = 25;
 
-stimPop = 1; % excitatory neurons
+stimPop = 2; % PV Neurons
 curstim = 200; % picoAmps
 stimLength = 100; % ms
 stimStart = 2.5*1000; % ms
 
 % set up groups
-nGroups = 4;
+nStimGroups = 2;
 groupToStim = 1;
 groupInds = pinds(stimPop):pinds(stimPop+1)-1;
 
@@ -39,8 +39,8 @@ stimI = zeros(Ntot,NT);
 
 groupIndsRand = groupInds(randperm(length(groupInds)));
 
-nPerGroup = length(groupInds)/nGroups;
-for i=1:nGroups
+nPerGroup = length(groupInds)/nStimGroups;
+for i=1:nStimGroups
     startInd = (i-1)*nPerGroup+1;
     endInd = i*nPerGroup;
     thisGroupInds = groupIndsRand(startInd:endInd);
@@ -316,14 +316,14 @@ end
 %     fRates(cc,:) = fRate;
 % end
 % 
-% groupAverages = zeros(nGroups+1,length(downsampledT));
-% gNums = zeros(nGroups+1,1);
+% groupAverages = zeros(nStimGroups+1,length(downsampledT));
+% gNums = zeros(nStimGroups+1,1);
 % gNum = 1;
 % for i=1:Ntot
 %     if sum(stimulatedNeurons==i)>0
-%         groupAverages(nGroups+1,:) = groupAverages(nGroups+1,:)+...
+%         groupAverages(nStimGroups+1,:) = groupAverages(nStimGroups+1,:)+...
 %             fRates(i,:);
-%         gNums(nGroups+1) = gNums(nGroups+1)+1;
+%         gNums(nStimGroups+1) = gNums(nStimGroups+1)+1;
 %     else
 %         groupAverages(whichpop(i),:) = groupAverages(whichpop(i),:)+...
 %             fRates(i,:);
@@ -337,7 +337,7 @@ end
 % figure;
 % subplot(4,3,1:9);
 % hold on;
-% for i=1:nGroups+1
+% for i=1:nStimGroups+1
 %     plot(downsampledT,groupAverages(i,:));
 % end
 % legend(groupNames);
@@ -347,25 +347,30 @@ cMap = [
     0 0.3 0.6; % blue-ish
     0 .5 0; % green
     1 .5 0; % orange
-    115/255 44/255 123/255
-    0 0 .3 % darker blue for stimulated pop
-    ];
-groupNames = {'E', 'PV', 'SOM', 'VIP', 'stimE'};
+    115/255 44/255 123/255 % purpley
+    0 0 0];
+% the color of the stimulated population (#5) should be a darker version of
+% the normal color
+cMap(5,:) = cMap(stimPop,:)./2; 
+
+groupNames = {'E', 'PV', 'SOM', 'VIP'};
+groupNames{5} = ['stim',groupNames{stimPop}];
+nG = length(groupNames);
 
 % COME UP WITH DESCRIPTIVE FIGURE NAME FOT THIS FIGURE
 experimentDescription = sprintf(['StimPop_%s_groupsInPop_%d_photoCurrent_%dpA_'...
-    'stimLength_%dms%s'], groupNames{stimPop}, nGroups, curstim, stimLength,...
+    'stimLength_%dms%s'], groupNames{stimPop}, nStimGroups, curstim, stimLength,...
     note);
 figName = [experimentDescription '_singleTrialPopFRates'];
 saveLoc = 'D:\Analysis\cortexModel\';
 
-groupAverages = zeros(nGroups+1,length(downsampledT));
-gNums = zeros(nGroups+1,1);
+groupAverages = zeros(nG,length(downsampledT));
+gNums = zeros(nG,1);
 for i=1:Ntot
     if sum(stimulatedNeurons==i)>0
-        groupAverages(nGroups+1,:) = groupAverages(nGroups+1,:)+...
+        groupAverages(5,:) = groupAverages(5,:)+...
             fR(i,:);
-        gNums(nGroups+1) = gNums(nGroups+1)+1;
+        gNums(5) = gNums(5)+1;
     else
         groupAverages(whichpop(i),:) = groupAverages(whichpop(i),:)+...
             fR(i,:);
@@ -378,14 +383,14 @@ groupAverages = groupAverages./gNums.*binSize*dt;
 figure('units', 'pix', 'outerposition', [0 50 1920 1150], 'color', [1 1 1]);
 subplot(4,3,1:9);
 hold on;
-for i=1:nGroups+1
+for i=1:nG
     plotH = plot(downsampledT./1000,groupAverages(i,:));
     plotH.Color = cMap(i,:);
     plotH.LineWidth = 1;
 end
 % Use Tex to change the color of the text on the figure
-legendCell = cell(length(groupNames),1);
-for i=1:length(groupNames)
+legendCell = cell(nG,1);
+for i=1:nG
     legendCell{i} = sprintf('\\color[rgb]{%.2f, %.2f, %.2f} %s',...
         cMap(i,:), groupNames{i});
 end
@@ -402,7 +407,12 @@ legH.FontWeight = 'bold';
 
 % Plot stimulation current!
 subplot(4,3,10:12);
-[row,col] = find(stimI==max(max(stimI,[],2)),1);
+% find a good zoom window around the stimulation
+if curstim > 0
+    [row,col] = find(stimI==max(max(stimI,[],2)),1);
+elseif curstim < 0
+    [row,col] = find(stimI==min(min(stimI,[],2)),1);
+end
 plotH = plot(allT./1000,stimI(row,:));
 plotH.LineWidth = 1;
 a = gca;
@@ -420,14 +430,14 @@ figName = [experimentDescription '_singleTrialPopFRatesZoomed' note];
 figure('units', 'pix', 'outerposition', [0 50 1920 1150], 'color', [1 1 1]);
 subplot(4,3,1:9);
 hold on;
-for i=1:nGroups+1
+for i=1:nG
     plotH = plot(downsampledT./1000,groupAverages(i,:));
     plotH.Color = cMap(i,:);
     plotH.LineWidth = 1;
 end
 % Use Tex to change the color of the text on the figure
-legendCell = cell(length(groupNames),1);
-for i=1:length(groupNames)
+legendCell = cell(nG,1);
+for i=1:nG
     legendCell{i} = sprintf('\\color[rgb]{%.2f, %.2f, %.2f} %s',...
         cMap(i,:), groupNames{i});
 end
@@ -443,12 +453,22 @@ ylabel('FR (Hz)', 'fontsize', 16);
 legH.FontWeight = 'bold';
 
 % find a good zoom window around the stimulation
-[row,col] = find(stimI==max(max(stimI,[],2)),1);
-dI = diff(stimI(row,:));
-[~,stimOn ] = max(dI);
-[~,stimOff ] = min(dI);
-[val,downsampledStartInd] = min(abs(downsampledT-allT(stimOn)));
-[val,downsampledEndInd] = min(abs(downsampledT-allT(stimOff)));
+if curstim > 0
+    [row,col] = find(stimI==max(max(stimI,[],2)),1);
+    dI = diff(stimI(row,:));
+    [~,stimOn ] = max(dI);
+    [~,stimOff ] = min(dI);
+    [val,downsampledStartInd] = min(abs(downsampledT-allT(stimOn)));
+    [val,downsampledEndInd] = min(abs(downsampledT-allT(stimOff)));
+elseif curstim < 0
+    [row,col] = find(stimI==min(min(stimI,[],2)),1);
+    dI = diff(stimI(row,:));
+    [~,stimOn ] = min(dI);
+    [~,stimOff ] = max(dI);
+    [val,downsampledStartInd] = min(abs(downsampledT-allT(stimOn)));
+    [val,downsampledEndInd] = min(abs(downsampledT-allT(stimOff)));
+end
+
 zoomWidth = 15; % in bins
 % ZOOM IN! 
 xlim([downsampledT(downsampledStartInd-zoomWidth)./1000 ...
@@ -456,7 +476,7 @@ xlim([downsampledT(downsampledStartInd-zoomWidth)./1000 ...
 
 % Plot stimulation current!
 subplot(4,3,10:12);
-[row,col] = find(stimI==max(max(stimI,[],2)),1);
+downsampledStim = downsample(stimI(row,:),binSize/dt);
 plotH = plot(downsampledT./1000,downsampledStim);
 plotH.LineWidth = 1;
 a = gca;
@@ -470,20 +490,20 @@ xlim([downsampledT(downsampledStartInd-zoomWidth)./1000 ...
 xlabel('Time (s)', 'fontsize',16);
 
 export_fig([saveLoc, figName], '-png', '-eps');
-% disp('THIS IS AFTER BREAKING E-> PV CONNECTIONS!!!');
+
 %% AVERAGE ALL TRIALS TOGETHER
 figName = sprintf('%s_%dTrialsAvgPopRates%s', experimentDescription, nTrials,note);
 
 fR = mean(fRates,3);
 
-groupAverages = zeros(nGroups+1,length(downsampledT));
-gNums = zeros(nGroups+1,1);
+groupAverages = zeros(nG,length(downsampledT));
+gNums = zeros(nG,1);
 gNum = 1;
 for i=1:Ntot
     if sum(stimulatedNeurons==i)>0
-        groupAverages(nGroups+1,:) = groupAverages(nGroups+1,:)+...
+        groupAverages(nG,:) = groupAverages(nG,:)+...
             fR(i,:);
-        gNums(nGroups+1) = gNums(nGroups+1)+1;
+        gNums(nG) = gNums(nG)+1;
     else
         groupAverages(whichpop(i),:) = groupAverages(whichpop(i),:)+...
             fR(i,:);
@@ -496,14 +516,14 @@ groupAverages = groupAverages./gNums.*binSize*dt;
 figure('units', 'pix', 'outerposition', [0 50 1920 1150], 'color', [1 1 1]);
 subplot(4,3,1:9);
 hold on;
-for i=1:nGroups+1
+for i=1:nG
     plotH = plot(downsampledT./1000,groupAverages(i,:));
     plotH.Color = cMap(i,:);
     plotH.LineWidth = 1;
 end
 % Use Tex to change the color of the text on the figure
-legendCell = cell(length(groupNames),1);
-for i=1:length(groupNames)
+legendCell = cell(nG,1);
+for i=1:nG
     legendCell{i} = sprintf('\\color[rgb]{%.2f, %.2f, %.2f} %s',...
         cMap(i,:), groupNames{i});
 end
@@ -520,7 +540,7 @@ legH.FontWeight = 'bold';
 
 % Plot stimulation current!
 subplot(4,3,10:12);
-[row,col] = find(stimI==max(max(stimI,[],2)),1);
+% [row,col] = find(stimI==max(max(stimI,[],2)),1);
 plot(allT./1000,stimI(row,:));
 a = gca;
 a.FontSize = 14;
@@ -536,14 +556,14 @@ figName = sprintf('%s_%dTrialsAvgPopRatesZoomed%s', ...
 
 fR = mean(fRates,3);
 
-groupAverages = zeros(nGroups+1,length(downsampledT));
-gNums = zeros(nGroups+1,1);
+groupAverages = zeros(nG,length(downsampledT));
+gNums = zeros(nG,1);
 gNum = 1;
 for i=1:Ntot
     if sum(stimulatedNeurons==i)>0
-        groupAverages(nGroups+1,:) = groupAverages(nGroups+1,:)+...
+        groupAverages(5,:) = groupAverages(5,:)+...
             fR(i,:);
-        gNums(nGroups+1) = gNums(nGroups+1)+1;
+        gNums(5) = gNums(5)+1;
     else
         groupAverages(whichpop(i),:) = groupAverages(whichpop(i),:)+...
             fR(i,:);
@@ -556,14 +576,14 @@ groupAverages = groupAverages./gNums.*binSize*dt;
 figure('units', 'pix', 'outerposition', [0 50 1920 1150], 'color', [1 1 1]);
 subplot(4,3,1:9);
 hold on;
-for i=1:nGroups+1
+for i=1:nG
     plotH = plot(downsampledT./1000,groupAverages(i,:));
     plotH.Color = cMap(i,:);
     plotH.LineWidth = 1;
 end
 % Use Tex to change the color of the text on the figure
-legendCell = cell(length(groupNames),1);
-for i=1:length(groupNames)
+legendCell = cell(nG,1);
+for i=1:nG
     legendCell{i} = sprintf('\\color[rgb]{%.2f, %.2f, %.2f} %s',...
         cMap(i,:), groupNames{i});
 end
@@ -582,7 +602,6 @@ xlim([downsampledT(downsampledStartInd-zoomWidth)/1000 ...
 
 % Plot stimulation current!
 subplot(4,3,10:12);
-[row,col] = find(stimI==max(max(stimI,[],2)),1);
 plot(allT./1000,stimI(row,:));
 a = gca;
 a.FontSize = 14;
@@ -599,8 +618,8 @@ export_fig([saveLoc, figName], '-png', '-eps');
 figName = sprintf('%s_%dTrials_AvgRateBeforeDuringStim%s', ...
     experimentDescription, nTrials,note);
 
-avgBefore = cell(length(groupNames),1);
-avgDuring = cell(length(groupNames),1);
+avgBefore = cell(nG,1);
+avgDuring = cell(nG,1);
 for cc = 1:Ntot
     
     % get the avg firing rate across all trials 1 second before stim
@@ -634,11 +653,11 @@ meanBefore = cellfun(@mean,avgBefore);
 meanDuring = cellfun(@mean,avgDuring);
 
 % make new cell array with distributions side-by-side
-frSideBySide = cell(length(groupNames)*2,1);
-inds = 1:2:length(groupNames)*2;
+frSideBySide = cell(nG*2,1);
+inds = 1:2:nG*2;
 % make a new colormap to match this array
-cMap2 = nan(length(groupNames)*2,3);
-for i=1:length(groupNames)
+cMap2 = nan(nG*2,3);
+for i=1:nG
     frSideBySide{inds(i)} = avgBefore{i};
     frSideBySide{inds(i)+1} = avgDuring{i};
     cMap2(inds(i),:) = cMap(i,:);
@@ -651,16 +670,16 @@ meanSideBySide = cellfun(@mean,frSideBySide);
 allFR = [avgBefore{:} avgDuring{:}];
 maxFR = ceil(max(allFR));
 
-figure('Units', 'Pix', 'outerposition', [0 50 1300 1150], 'color', [1 1 1]);
+figure('Units', 'Pix', 'outerposition', [0 50 1600 1150], 'color', [1 1 1]);
 plotSpread(frSideBySide, 'distributionColors', cMap2);
 hold on;
-for i=1:length(groupNames)*2
+for i=1:nG*2
     line([i-.4 i+.4], [meanSideBySide(i) meanSideBySide(i)], 'Color', ...
         cMap2(i,:), 'lineWidth', 1.5);
 end
 hold off;
-newLegendCell = cell(length(groupNames)*2,1);
-for i=1:length(groupNames)
+newLegendCell = cell(nG*2,1);
+for i=1:nG
     newLegendCell{inds(i)} = legendCell{i};
     newLegendCell{inds(i)+1} = '';
 end
