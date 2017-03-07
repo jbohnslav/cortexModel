@@ -248,6 +248,9 @@ cMap = [
 
 postYLim = [-60.2 -57.5];
 
+saveLoc = 'D:\Analysis\cortexModel\monosynapticExample\';
+figName = 'ePre';
+
 figure('units', 'pix', 'outerposition', [0 50 1920 1150], 'Color', ...
     [1 1 1]);
 % presynaptic
@@ -307,6 +310,8 @@ plotH.Color = cMap(4,:);
 xlabel('Time (ms)');
 ylabel([groupNames{4}], 'fontweight', 'bold');
 
+export_fig([saveLoc, figName], '-png');
+
 %% NOW FOR PV PRESYNAPTIC
 [Ntrials, T, dt, Ncells, Ntot, Npop, rates, times, ...
     pvtuned, p0, p2, J, r0, r2, gSyn, Esyn, taurise, taudecay, ...
@@ -338,7 +343,7 @@ whichpop = [2 1 2 3 4];
 NT = round(T/dt);
 
 stimPop = 2; % PV neurons
-curstim = 180; % picoAmps
+curstim = 170; % picoAmps
 stimLength = 500; % ms
 stimStart = 50; % ms
 
@@ -542,6 +547,8 @@ cMap = [
     115/255 44/255 123/255];
 
 postYLim = [-65 -59];
+
+figName = 'pvPre';
 
 figure('units', 'pix', 'outerposition', [0 50 1920 1150], 'Color', ...
     [1 1 1]);
@@ -602,7 +609,7 @@ a.YLim = postYLim;
 plotH.Color = cMap(4,:);
 xlabel('Time (ms)');
 ylabel([groupNames{4}], 'fontweight', 'bold');
-
+export_fig([saveLoc, figName], '-png');
 %
 %% NOW FOR SOM PRESYNAPTIC
 [Ntrials, T, dt, Ncells, Ntot, Npop, rates, times, ...
@@ -635,7 +642,7 @@ whichpop = [3 1 2 3 4];
 NT = round(T/dt);
 
 stimPop = 3; % SOM neurons
-curstim = 160; % picoAmps
+curstim = 150; % picoAmps
 stimLength = 500; % ms
 stimStart = 50; % ms
 
@@ -840,6 +847,8 @@ cMap = [
 
 postYLim = [-65 -59];
 
+figName = 'somPre';
+
 figure('units', 'pix', 'outerposition', [0 50 1920 1150], 'Color', ...
     [1 1 1]);
 % presynaptic
@@ -898,6 +907,8 @@ a.YLim = postYLim;
 plotH.Color = cMap(4,:);
 xlabel('Time (ms)');
 ylabel([groupNames{4}], 'fontweight', 'bold');
+
+export_fig([saveLoc, figName], '-png');
 
 %% NOW FOR VIP PRESYNAPTIC
 [Ntrials, T, dt, Ncells, Ntot, Npop, rates, times, ...
@@ -1112,6 +1123,7 @@ cMap = [
     115/255 44/255 123/255];
 
 postYLim = [-65 -59];
+figName = 'vipPre';
 
 figure('units', 'pix', 'outerposition', [0 50 1920 1150], 'Color', ...
     [1 1 1]);
@@ -1171,3 +1183,4 @@ a.YLim = postYLim;
 plotH.Color = cMap(4,:);
 xlabel('Time (ms)');
 ylabel([groupNames{4}], 'fontweight', 'bold');
+export_fig([saveLoc, figName], '-png');
