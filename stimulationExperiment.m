@@ -27,12 +27,12 @@ note = ''; % if nothing is different
 
 % other parameters
 NT = round(T/dt);
-nTrials = 5;
+nTrials = 1;
 onePulse = 1;
 
-stimPop = 2; % PV Neurons
-curstim = -250; % picoAmps
-stimLength = 100; % ms
+stimPop = 4; % 
+curstim = 250; % picoAmps
+stimLength = 50; % ms
 stimStart = 2.5*1000; % ms
 
 % set up groups
@@ -298,8 +298,7 @@ for trial = 1:nTrials
     for cc=1:Ntot
 %         [fRate,~] = downsampleSpikes(allSpikes(cc,:,trial),binSize,dt);
 %         gauss_window = 100/dt; % 100 ms bin width for downsampling
-        gauss_SD = 50; % ms standard deviation
-        x = 1:1000;
+        gauss_SD = 25; % ms standard deviation
         edges = -3*gauss_SD:dt:3*gauss_SD;
         kernel = normpdf(edges,0,gauss_SD);
         sdf = conv(allSpikes(cc,:,trial),kernel,'same').*1000;
@@ -379,139 +378,13 @@ ylabel({'External stimulation', 'current (pA)'}, 'fontsize', 16);
 xlabel('Time (s)', 'fontsize', 16);
 disp('exporting figure...');
 export_fig([saveLoc, figName], '-png');
-%% firing rate figure for single trial
-fR = fRates(:,:,randi(size(fRates,3)));
-
-% the color of the stimulated population (#5) should be a darker version of
-% the normal color
-%  
-% 
-
-% 
-% groupAverages = zeros(nG,length(downsampledT));
-% gNums = zeros(nG,1);
-% for i=1:Ntot
-%     if sum(stimulatedNeurons==i)>0
-%         groupAverages(5,:) = groupAverages(5,:)+...
-%             fR(i,:);
-%         gNums(5) = gNums(5)+1;
-%     else
-%         groupAverages(whichpop(i),:) = groupAverages(whichpop(i),:)+...
-%             fR(i,:);
-%         gNums(whichpop(i)) = gNums(whichpop(i))+1;
-%     end
-% end
-% % firing rate averages, in hertz
-% groupAverages = groupAverages./gNums.*binSize*dt;
-% 
-% figure('units', 'pix', 'outerposition', [0 50 1920 1150], 'color', [1 1 1]);
-% subplot(4,3,1:9);
-% hold on;
-% for i=1:nG
-%     plotH = plot(downsampledT./1000,groupAverages(i,:));
-%     plotH.Color = cMap(i,:);
-%     plotH.LineWidth = 1;
-% end
-% % Use Tex to change the color of the text on the figure
-% legendCell = cell(nG,1);
-% for i=1:nG
-%     legendCell{i} = sprintf('\\color[rgb]{%.2f, %.2f, %.2f} %s',...
-%         cMap(i,:), groupNames{i});
-% end
-% legH = legend(legendCell);
-% legH.FontSize = 16;
-% % Make figure pretty
-% a = gca;
-% a.FontSize = 14;
-% a.XTick = [];
-% a.TickDir = 'out';
-% title(strrep(figName,'_', ' '), 'fontsize', 18);
-% ylabel('FR (Hz)', 'fontsize', 16);
-% legH.FontWeight = 'bold';
-% 
-% % Plot stimulation current!
-% subplot(4,3,10:12);
-% % find a good zoom window around the stimulation
-% if curstim > 0
-%     [row,col] = find(stimI==max(max(stimI,[],2)),1);
-% elseif curstim < 0
-%     [row,col] = find(stimI==min(min(stimI,[],2)),1);
-% end
-% plotH = plot(allT./1000,stimI(row,:));
-% plotH.LineWidth = 1;
-% a = gca;
-% a.FontSize = 14;
-% a.TickDir = 'out';
-% ys = ylim;
-% ylim([ys(1), ys(2)+50]);
-% ylabel({'External stimulation', 'current (pA)'}, 'fontsize', 16);
-% xlabel('Time (s)', 'fontsize', 16);
-% export_fig([saveLoc, figName], '-png', '-eps');
-% 
-% %% zoom in figure around stimulation
-% figName = [experimentDescription '_singleTrialPopFRatesZoomed' note];
-% 
-% figure('units', 'pix', 'outerposition', [0 50 1920 1150], 'color', [1 1 1]);
-% subplot(4,3,1:9);
-% hold on;
-% for i=1:nG
-%     plotH = plot(downsampledT./1000,groupAverages(i,:));
-%     plotH.Color = cMap(i,:);
-%     plotH.LineWidth = 1;
-% end
-% % Use Tex to change the color of the text on the figure
-% legendCell = cell(nG,1);
-% for i=1:nG
-%     legendCell{i} = sprintf('\\color[rgb]{%.2f, %.2f, %.2f} %s',...
-%         cMap(i,:), groupNames{i});
-% end
-% legH = legend(legendCell);
-% legH.FontSize = 16;
-% % Make figure pretty
-% a = gca;
-% a.FontSize = 14;
-% a.XTick = [];
-% a.TickDir = 'out';
-% title(strrep(figName,'_', ' '), 'fontsize', 18);
-% ylabel('FR (Hz)', 'fontsize', 16);
-% legH.FontWeight = 'bold';
-% 
-% % find a good zoom window around the stimulation
-
-stimOn = stimTInds(1);
-stimOff = stimTInds(end);
-[~,downsampledStartInd] = min(abs(downsampledT-allT(stimOn)));
-[~,downsampledEndInd] = min(abs(downsampledT-allT(stimOff)));
-
-
-zoomWidth = 15; % in bins
-% % ZOOM IN! 
-% xlim([downsampledT(downsampledStartInd-zoomWidth)./1000 ...
-%     downsampledT(downsampledStartInd+zoomWidth)./1000]);
-% 
-% % Plot stimulation current!
-% subplot(4,3,10:12);
-% downsampledStim = downsample(stimI(row,:),binSize/dt);
-% plotH = plot(downsampledT./1000,downsampledStim);
-% plotH.LineWidth = 1;
-% a = gca;
-% a.FontSize = 14;
-% a.TickDir = 'out';
-% ys = ylim;
-% ylim([ys(1), ys(2)+50]);
-% ylabel({'External stimulation', 'current (pA)'}, 'fontsize', 16);
-% xlim([downsampledT(downsampledStartInd-zoomWidth)./1000 ...
-%     downsampledT(downsampledStartInd+zoomWidth)./1000]);
-% xlabel('Time (s)', 'fontsize',16);
-% 
-% export_fig([saveLoc, figName], '-png', '-eps');
 
 %% AVERAGE ALL TRIALS TOGETHER
 figName = sprintf('%s_%dTrialsAvgPopRates%s', experimentDescription, nTrials);
 
 fR = mean(fRates,3);
 
-groupAverages = zeros(nG,length(downsampledT));
+groupAverages = zeros(nG,length(allT));
 gNums = zeros(nG,1);
 gNum = 1;
 for i=1:Ntot
@@ -526,13 +399,13 @@ for i=1:Ntot
     end
 end
 % firing rate averages, in hertz
-groupAverages = groupAverages./gNums.*binSize*dt;
+groupAverages = groupAverages./gNums;
 
 figure('units', 'pix', 'outerposition', [0 50 1920 1150], 'color', [1 1 1]);
 subplot(4,3,1:9);
 hold on;
 for i=1:nG
-    plotH = plot(downsampledT./1000,groupAverages(i,:));
+    plotH = plot(allT./1000,groupAverages(i,:));
     plotH.Color = cMap(i,:);
     plotH.LineWidth = 1;
 end
@@ -564,37 +437,66 @@ ys = ylim;
 ylim([ys(1), ys(2)+50]);
 ylabel({'External stimulation', 'current (pA)'}, 'fontsize', 16);
 
-export_fig([saveLoc, figName], '-png', '-eps');
+export_fig([saveLoc, figName], '-png');
 %% zoom in figure around stimulation
+zoomWidth = 100; % milliseconds
+stimOn = allT(stimTInds(1));
+stimOff = allT(stimTInds(end)+1);
+
 figName = sprintf('%s_%dTrialsAvgPopRatesZoomed%s', ...
     experimentDescription, nTrials);
 
-fR = mean(fRates,3);
+% work with means for each neuron across trials
+fR = mean(fRates,3); 
 
-groupAverages = zeros(nG,length(downsampledT));
-gNums = zeros(nG,1);
-gNum = 1;
-for i=1:Ntot
-    if sum(stimulatedNeurons==i)>0
-        groupAverages(5,:) = groupAverages(5,:)+...
-            fR(i,:);
-        gNums(5) = gNums(5)+1;
+% make a cell array of matrices, each matrix has fR x cells
+groupAverages = cell(nG,1);
+nInGroup = nan(nG,1);
+for i=1:length(Ncells)
+    if i==stimPop
+        nInGroup(i) = Ncells(i)- length(stimulatedNeurons);
+        nInGroup(5) = length(stimulatedNeurons);
     else
-        groupAverages(whichpop(i),:) = groupAverages(whichpop(i),:)+...
-            fR(i,:);
-        gNums(whichpop(i)) = gNums(whichpop(i))+1;
+        nInGroup(i) = Ncells(i);
     end
 end
+% pre-allocate for speed
+for i=1:nG
+    groupAverages{i} = nan(nInGroup(i),NT);
+end
+howMany = ones(nG,1);
+for i=1:Ntot
+    % if this neuron is in stimulated group
+    if sum(stimulatedNeurons==i)>0
+%         mat = groupAverages{5};
+        groupAverages{5}(howMany(5),:) = fR(i,:);
+        howMany(5) = howMany(5)+1;
+    else
+%         mat = groupAverages{whichpop(i)};
+        groupAverages{whichpop(i)}(howMany(whichpop(i)),:) = fR(i,:);
+        howMany(whichpop(i)) = howMany(whichpop(i))+1;
+    end
+%     i
+end
 % firing rate averages, in hertz
-groupAverages = groupAverages./gNums.*binSize*dt;
+groupAvgAllCells = nan(nG,NT);
+groupStdAllCells = nan(nG,NT);
+for i=1:nG
+    groupAvgAllCells(i,:) = mean(groupAverages{i});
+    groupStdAllCells(i,:) = std(groupAverages{i});
+end
+
 
 figure('units', 'pix', 'outerposition', [0 50 1920 1150], 'color', [1 1 1]);
 subplot(4,3,1:9);
 hold on;
 for i=1:nG
-    plotH = plot(downsampledT./1000,groupAverages(i,:));
-    plotH.Color = cMap(i,:);
-    plotH.LineWidth = 1;
+    SEB = shadedErrorBar(allT./1000,groupAvgAllCells(i,:),...
+        groupStdAllCells(i,:)/sqrt(nInGroup(i)));
+    SEB.mainLine.Color = cMap(i,:);
+    SEB.mainLine.LineWidth = 1.5;
+    SEB.patch.FaceAlpha = .3;
+    SEB.patch.FaceColor = cMap(i,:);
 end
 % Use Tex to change the color of the text on the figure
 legendCell = cell(nG,1);
@@ -612,8 +514,7 @@ a.TickDir = 'out';
 title(strrep(figName,'_', ' '), 'fontsize', 18);
 ylabel('FR (Hz)', 'fontsize', 16);
 legH.FontWeight = 'bold';
-xlim([downsampledT(downsampledStartInd-zoomWidth)/1000 ...
-    downsampledT(downsampledEndInd+zoomWidth)/1000]);
+xlim([(stimOn-zoomWidth)/1000 (stimOff+zoomWidth)/1000]);
 
 % Plot stimulation current!
 subplot(4,3,10:12);
@@ -624,8 +525,7 @@ a.TickDir = 'out';
 ys = ylim;
 ylim([ys(1), ys(2)+50]);
 ylabel({'External stimulation', 'current (pA)'}, 'fontsize', 16);
-xlim([downsampledT(downsampledStartInd-zoomWidth)/1000 ...
-    downsampledT(downsampledEndInd+zoomWidth)/1000]);
+xlim([(stimOn-zoomWidth)/1000 (stimOff+zoomWidth)/1000]);
 
 export_fig([saveLoc, figName], '-png', '-eps');
 
@@ -637,10 +537,10 @@ avgBefore = cell(nG,1);
 avgDuring = cell(nG,1);
 for cc = 1:Ntot
     
-    % get the avg firing rate across all trials 1 second before stim
-    fRateBefore = fR(cc,downsampledStartInd-1000/binSize:downsampledStartInd-1);
-    % get avg firing rate during all trials during stim
-    fRateDuring = fR(cc,downsampledStartInd:downsampledEndInd);
+    % get the avg firing rate across all trials 100 ms before stim
+    fRateBefore = fR(cc,stimTInds(1)-100/dt:stimTInds(1)-1);
+    % get avg firing rate during / after all trials during stim
+    fRateDuring = fR(cc,stimTInds(1):stimTInds(1)+100/dt);
     
     % if stimulated population
     if sum(cc==stimulatedNeurons)>0
@@ -707,18 +607,21 @@ ylabel('Firing rate (Hz)', 'fontsize', 18);
 a.XTick = [];
 
 title(strrep(figName,'_', ' '), 'Fontsize', 18,'fontweight', 'bold');
-export_fig([saveLoc, figName], '-png', '-eps');
+export_fig([saveLoc, figName], '-png');
 
 %%
 figName = [experimentDescription, 'frRateCDF'];
-frBins = linspace(0,1,25); % Hz
+
 figure('units', 'pix', 'outerposition', [0 50 1920 1150], 'color', [1 1 1]);
 
 subplot(1,2,1);
 scH = scatter(frSideBySide{1},frSideBySide{2}, 30,'filled');
 scH.MarkerFaceColor = cMap(1,:);
 hold on;
-axis([0 1 0 1])
+% axis([0 1 0 1])
+maxFR = max([frSideBySide{1} frSideBySide{2}]);
+axis([0 maxFR 0 maxFR]);
+axis square;
 xs = xlim;
 ys = ylim;
 line(xs,ys,'color', 'k');
@@ -737,7 +640,9 @@ legend('Data','y=x', sprintf('y=%.2fx + %.2f,r^2=%.3f', coeffs(2),coeffs(1),...
     mdl.Rsquared.Ordinary));
 xlabel('FR Rate before stim', 'fontsize', 16, 'fontweight', 'bold');
 ylabel('FR Rate after stim', 'fontsize', 16, 'fontweight', 'bold'); 
+
 subplot(1,2,2);
+frBins = linspace(0,maxFR,25); % Hz
 [f,x] = hist(frSideBySide{1},frBins);
 normFPreStim = f/sum(f);
 
@@ -768,137 +673,137 @@ ylabel('CDF', 'fontsize', 16, 'fontweight', 'bold');
 title(sprintf('Firing Rate CDF: Stim > Before P=%.4f', p));
 export_fig([saveLoc, figName], '-png');
 %%
-figName = sprintf('%s_%dTrials_AvgVoltage', ...
-    experimentDescription, nTrials);
-
-groupAverages = zeros(nG,length(allT));
-gNums = zeros(nG,1);
-gNum = 1;
-for i=1:Ntot
-    if sum(stimulatedNeurons==i)>0
-        groupAverages(nG,:) = groupAverages(nG,:)+...
-            mean(allV(i,:,:),3);
-        gNums(nG) = gNums(nG)+1;
-    else
-        groupAverages(whichpop(i),:) = groupAverages(whichpop(i),:)+...
-            mean(allV(i,:,:),3);
-        gNums(whichpop(i)) = gNums(whichpop(i))+1;
-    end
-end
-% firing rate averages, in hertz
-groupAverages = groupAverages./gNums;
-
-figure('Units', 'Pix', 'outerposition', [0 50 1600 1150], 'color', [1 1 1]);
-subplot(4,1,1:3);
-hold on;
-for i=1:nG
-    plot(allT,groupAverages(i,:),'Color',cMap(i,:));
-end
-hold off;
-legend(groupNames)
-legendCell = cell(nG,1);
-for i=1:nG
-    legendCell{i} = sprintf('\\color[rgb]{%.2f, %.2f, %.2f} %s',...
-        cMap(i,:), groupNames{i});
-end
-legH = legend(legendCell);
-legH.FontSize = 16;
-% Make figure pretty
-a = gca;
-a.FontSize = 14;
-a.XTick = [];
-a.TickDir = 'out';
-title(strrep(figName,'_', ' '), 'fontsize', 18);
-ylabel('V (mV)', 'fontsize', 16);
-legH.FontWeight = 'bold';
-width = 100; %ms
-xlim([allT(stimTInds(1))-width allT(stimTInds(end))+width]);
-
-subplot(4,1,4);
-plot(allT,stimWave);
-xlim([allT(stimTInds(1))-width allT(stimTInds(end))+width]);
+% figName = sprintf('%s_%dTrials_AvgVoltage', ...
+%     experimentDescription, nTrials);
+% 
+% groupAverages = zeros(nG,length(allT));
+% gNums = zeros(nG,1);
+% gNum = 1;
+% for i=1:Ntot
+%     if sum(stimulatedNeurons==i)>0
+%         groupAverages(nG,:) = groupAverages(nG,:)+...
+%             mean(allV(i,:,:),3);
+%         gNums(nG) = gNums(nG)+1;
+%     else
+%         groupAverages(whichpop(i),:) = groupAverages(whichpop(i),:)+...
+%             mean(allV(i,:,:),3);
+%         gNums(whichpop(i)) = gNums(whichpop(i))+1;
+%     end
+% end
+% % firing rate averages, in hertz
+% groupAverages = groupAverages./gNums;
+% 
+% figure('Units', 'Pix', 'outerposition', [0 50 1600 1150], 'color', [1 1 1]);
+% subplot(4,1,1:3);
+% hold on;
+% for i=1:nG
+%     plot(allT,groupAverages(i,:),'Color',cMap(i,:));
+% end
+% hold off;
+% legend(groupNames)
+% legendCell = cell(nG,1);
+% for i=1:nG
+%     legendCell{i} = sprintf('\\color[rgb]{%.2f, %.2f, %.2f} %s',...
+%         cMap(i,:), groupNames{i});
+% end
+% legH = legend(legendCell);
+% legH.FontSize = 16;
+% % Make figure pretty
+% a = gca;
+% a.FontSize = 14;
+% a.XTick = [];
+% a.TickDir = 'out';
+% title(strrep(figName,'_', ' '), 'fontsize', 18);
+% ylabel('V (mV)', 'fontsize', 16);
+% legH.FontWeight = 'bold';
+% width = 100; %ms
+% xlim([allT(stimTInds(1))-width allT(stimTInds(end))+width]);
+% 
+% subplot(4,1,4);
+% plot(allT,stimWave);
+% xlim([allT(stimTInds(1))-width allT(stimTInds(end))+width]);
 
 %% voltage before and after stimulation
 
-
-figName = sprintf('%s_%dTrials_VoltageBeforeDuringStim%s', ...
-    experimentDescription, nTrials);
-
-avgBefore = cell(nG,1);
-avgDuring = cell(nG,1);
-for cc = 1:Ntot
-    
-    % get the avg voltage across all trials 1 second before stim
-    vBefore = mean(allV(cc,stimTInds(1)-1000/dt:stimTInds(1)-1,:),3);
-    % get avg voltage during all trials during stim
-    vDuring = mean(allV(cc,stimTInds,:),3);
-    
-    % if stimulated population
-    if sum(cc==stimulatedNeurons)>0
-        % add to cell array
-        avgArray = avgBefore{5};
-        avgArray(end+1) = mean(vBefore);
-        avgBefore{5} = avgArray;
-        
-        avgArray = avgDuring{5};
-        avgArray(end+1) = mean(vDuring);
-        avgDuring{5} = avgArray;
-    else
-        % add to cell array of specified population
-        avgArray = avgBefore{whichpop(cc)};
-        avgArray(end+1) = mean(vBefore);
-        avgBefore{whichpop(cc)} = avgArray;
-        
-        avgArray = avgDuring{whichpop(cc)};
-        avgArray(end+1) = mean(vDuring);
-        avgDuring{whichpop(cc)} = avgArray;
-    end
-end
-
-meanBefore = cellfun(@mean,avgBefore);
-meanDuring = cellfun(@mean,avgDuring);
-
-% make new cell array with distributions side-by-side
-vSideBySide = cell(nG*2,1);
-inds = 1:2:nG*2;
-% make a new colormap to match this array
-cMap2 = nan(nG*2,3);
-for i=1:nG
-    vSideBySide{inds(i)} = avgBefore{i};
-    vSideBySide{inds(i)+1} = avgDuring{i};
-    cMap2(inds(i),:) = cMap(i,:);
-    cMap2(inds(i)+1,:) = cMap(i,:);
-end
-
-meanSideBySide = cellfun(@mean,vSideBySide);
-
-% figure out the maximum firing rate to set the y limit
-allFR = [avgBefore{:} avgDuring{:}];
-maxFR = ceil(max(allFR));
-
-figure('Units', 'Pix', 'outerposition', [0 50 1600 1150], 'color', [1 1 1]);
-plotSpread(vSideBySide, 'distributionColors', cMap2);
-hold on;
-for i=1:nG*2
-    line([i-.4 i+.4], [meanSideBySide(i) meanSideBySide(i)], 'Color', ...
-        cMap2(i,:), 'lineWidth', 1.5);
-end
-hold off;
-newLegendCell = cell(nG*2,1);
-for i=1:nG
-    newLegendCell{inds(i)} = legendCell{i};
-    newLegendCell{inds(i)+1} = '';
-end
-legH = legend(newLegendCell);
-legH.FontSize = 16;
-a = gca;
-% a.YLim = [0 maxFR];
-a.FontSize = 14;
-ylabel('Vm (mV)', 'fontsize', 18);
-a.XTick = [];
-
-title(strrep(figName,'_', ' '), 'Fontsize', 18,'fontweight', 'bold');
-export_fig([saveLoc, figName], '-png');
+% 
+% figName = sprintf('%s_%dTrials_VoltageBeforeDuringStim%s', ...
+%     experimentDescription, nTrials);
+% 
+% avgBefore = cell(nG,1);
+% avgDuring = cell(nG,1);
+% for cc = 1:Ntot
+%     
+%     % get the avg voltage across all trials 1 second before stim
+%     vBefore = mean(allV(cc,stimTInds(1)-1000/dt:stimTInds(1)-1,:),3);
+%     % get avg voltage during all trials during stim
+%     vDuring = mean(allV(cc,stimTInds,:),3);
+%     
+%     % if stimulated population
+%     if sum(cc==stimulatedNeurons)>0
+%         % add to cell array
+%         avgArray = avgBefore{5};
+%         avgArray(end+1) = mean(vBefore);
+%         avgBefore{5} = avgArray;
+%         
+%         avgArray = avgDuring{5};
+%         avgArray(end+1) = mean(vDuring);
+%         avgDuring{5} = avgArray;
+%     else
+%         % add to cell array of specified population
+%         avgArray = avgBefore{whichpop(cc)};
+%         avgArray(end+1) = mean(vBefore);
+%         avgBefore{whichpop(cc)} = avgArray;
+%         
+%         avgArray = avgDuring{whichpop(cc)};
+%         avgArray(end+1) = mean(vDuring);
+%         avgDuring{whichpop(cc)} = avgArray;
+%     end
+% end
+% 
+% meanBefore = cellfun(@mean,avgBefore);
+% meanDuring = cellfun(@mean,avgDuring);
+% 
+% % make new cell array with distributions side-by-side
+% vSideBySide = cell(nG*2,1);
+% inds = 1:2:nG*2;
+% % make a new colormap to match this array
+% cMap2 = nan(nG*2,3);
+% for i=1:nG
+%     vSideBySide{inds(i)} = avgBefore{i};
+%     vSideBySide{inds(i)+1} = avgDuring{i};
+%     cMap2(inds(i),:) = cMap(i,:);
+%     cMap2(inds(i)+1,:) = cMap(i,:);
+% end
+% 
+% meanSideBySide = cellfun(@mean,vSideBySide);
+% 
+% % figure out the maximum firing rate to set the y limit
+% allFR = [avgBefore{:} avgDuring{:}];
+% maxFR = ceil(max(allFR));
+% 
+% figure('Units', 'Pix', 'outerposition', [0 50 1600 1150], 'color', [1 1 1]);
+% plotSpread(vSideBySide, 'distributionColors', cMap2);
+% hold on;
+% for i=1:nG*2
+%     line([i-.4 i+.4], [meanSideBySide(i) meanSideBySide(i)], 'Color', ...
+%         cMap2(i,:), 'lineWidth', 1.5);
+% end
+% hold off;
+% newLegendCell = cell(nG*2,1);
+% for i=1:nG
+%     newLegendCell{inds(i)} = legendCell{i};
+%     newLegendCell{inds(i)+1} = '';
+% end
+% legH = legend(newLegendCell);
+% legH.FontSize = 16;
+% a = gca;
+% % a.YLim = [0 maxFR];
+% a.FontSize = 14;
+% ylabel('Vm (mV)', 'fontsize', 18);
+% a.XTick = [];
+% 
+% title(strrep(figName,'_', ' '), 'Fontsize', 18,'fontweight', 'bold');
+% export_fig([saveLoc, figName], '-png');
 
 
 
